@@ -10,14 +10,16 @@ const app = express()
 app.use(morgan('dev'))
 app.use(helmet())
 app.use(compression())
+app.use(express.json())
+app.use(express.urlencoded({
+    extended: true
+}))
+
 
 // init db
 require('./dbs/init.mongodb')
 
-app.get('', (req, res) => {
-    res.status(200).json({
-        message: "hello"
-    })
-})
+// init routes
+app.use('', require('./routes'))
 
 module.exports = app
