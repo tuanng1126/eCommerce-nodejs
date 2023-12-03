@@ -4,9 +4,9 @@ const ShopModel = require("../models/shop.model");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const KeyTokenService = require("./keyToken.service");
-const createTokenPair = require("../auth/auth.utils");
+const {createTokenPair} = require("../auth/auth.utils");
 const getInfoData = require("../utils");
-const {BadRequest, AuthFailureError} = require("../core/error.response");
+const {BadRequest, AuthFailureError, ForbiddenError} = require("../core/error.response");
 const {findByEmail} = require("./shop.service");
 
 const RoleShop = {
@@ -14,6 +14,42 @@ const RoleShop = {
 };
 
 class AccessService {
+
+    static handlerRefreshToken = async ({refreshToken, user, keyStore}) => {
+        const {userId, email} = user;
+
+        if ( keyStore.refreshTokenUsed.includes(refreshToken)){
+            await KeyTokenService.removeKeyById(userId)
+            throw new ForbiddenError("Something wrong happened !!! pls re-login")
+        }
+
+        if (!keyStore.refreshToken.includes(refreshToken)) {
+            throw new AuthFailureError("Shop not registered")
+        }
+
+        const foundShop = findByEmail(email)
+        if (!foundShop) throw new AuthFailureError("Shop not registered")
+
+        const tokens = await createTokenPair({userId, email}, keyStore.publicKey, keyStore.privateKey)
+
+        await keyStore.updateOne({
+            $set: {
+                refreshToken: tokens.refreshToken,
+            },
+            $addToSet: {
+                refreshTokenUsed: refreshToken
+            }
+        })
+
+        return {
+            user: {userId, email},
+            tokens
+        }
+    }
+
+    static logout = async({keyStore}) => {
+        return await KeyTokenService.removeKeyById(keyStore._id)
+    }
 
     static login = async ({email, password, refreshToken = null}) => {
         const shopFound = await findByEmail({email})
