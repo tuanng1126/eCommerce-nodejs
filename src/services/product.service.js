@@ -1,20 +1,35 @@
 "use strict";
 
-const { product, clothing, electronic } = require("../models/product.models");
+const {
+  product,
+  clothing,
+  electronic,
+  furniture,
+} = require("../models/product.models");
 const { BadRequest } = require("../core/error.response");
 
 class ProductFactory {
-  static async createProduct(type, payload) {
-    switch (type) {
-      case "Electronic":
-        return new Electronic(payload).createProduct();
-      case "Clothing":
-        console.log(new Clothing(payload));
+  // static async createProduct(type, payload) {
+  //   switch (type) {
+  //     case "Electronic":
+  //       return new Electronic(payload).createProduct();
+  //     case "Clothing":
+  //       console.log(new Clothing(payload));
 
-        return new Clothing(payload).createProduct();
-      default:
-        throw new BadRequest(`Invalid product type ${type}`);
-    }
+  //       return new Clothing(payload).createProduct();
+  //     default:
+  //       throw new BadRequest(`Invalid product type ${type}`);
+  //   }
+  // }
+  static productRegistry = {};
+  static registerProductType(type, classRef) {
+    ProductFactory.productRegistry[type] = classRef;
+  }
+  static async createProduct(type, payload) {
+    const productClass = ProductFactory.productRegistry[type];
+    if (!productClass) throw new BadRequest(`Invalid product type ${type}`);
+
+    return new productClass(payload).createProduct();
   }
 }
 
@@ -40,10 +55,10 @@ class Product {
   }
 
   async createProduct(product_id) {
-    console.log(`this`, this)
+    console.log(`this`, this);
     return await product.create({
       ...this,
-      _id: product_id
+      _id: product_id,
     });
   }
 }
@@ -63,7 +78,7 @@ class Electronic extends Product {
   async createProduct() {
     const newElectronic = await electronic.create({
       ...this.product_attributes,
-      product_shop: this.product_shop
+      product_shop: this.product_shop,
     });
     if (!newElectronic) throw BadRequest("Create newElectronic error");
 
@@ -72,5 +87,24 @@ class Electronic extends Product {
     return newProduct;
   }
 }
+
+class Furniture extends Product {
+  async createProduct() {
+    const newFurniture = await furniture.create({
+      ...this.product_attributes,
+      product_shop: this.product_shop,
+    });
+    if (!newFurniture) throw BadRequest("Create newFurniture error");
+
+    const newProduct = await super.createProduct(newFurniture._id);
+    if (!newProduct) throw BadRequest("Create newProduct error");
+    return newProduct;
+  }
+}
+
+// register product type
+ProductFactory.registerProductType('Electronic', Electronic)
+ProductFactory.registerProductType('Clothing', Clothing)
+ProductFactory.registerProductType('Furniture', Furniture)
 
 module.exports = ProductFactory;
