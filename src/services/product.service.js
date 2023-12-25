@@ -20,7 +20,8 @@ const {
 const {
   removeUndefinedObject,
   updateNestedObjectParser
-} = require('../utils')
+} = require('../utils');
+const { insertInventory } = require("../models/repositories/inventory.repo");
 
 class ProductFactory {
   // static async createProduct(type, payload) {
@@ -118,10 +119,16 @@ class Product {
   }
 
   async createProduct(product_id) {
-    return await product.create({
-      ...this,
-      _id: product_id,
-    });
+    const newProduct = await product.create({...this, _id: product_id,});
+
+    if (newProduct) {
+      await insertInventory({
+        productId: newProduct._id,
+        shopId: this.product_shop,
+        stock: this.product_quantity
+      })
+    }
+    return newProduct
   }
 
   async updateProduct(product_id, bodyUpdate) {
