@@ -5,7 +5,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const KeyTokenService = require("./keyToken.service");
 const {createTokenPair} = require("../auth/auth.utils");
-const getInfoData = require("../utils");
+const {getInfoData} = require("../utils");
 const {BadRequest, AuthFailureError, ForbiddenError} = require("../core/error.response");
 const {findByEmail} = require("./shop.service");
 
